@@ -1,48 +1,61 @@
 import React, { useState } from 'react';
+import './Shop.css';
 import fakeData from '../../fakeData';
-import Product from '../Product/Product';
-import './Shop.css'
+import Product from '../product/Product';
+import Cart from '../Cart/Cart';
+import { addToDatabaseCart, getDatabaseCart } from '../../utilities/databaseManager';
+import { useEffect } from 'react';
+import { Link } from 'react-router-dom';
 
 
 const Shop = () => {
-    const firstTenData = fakeData.slice(0, 10);
-    const [data, setData] = useState(firstTenData);
+    const firstData = fakeData.slice(0, 12);
+    const [data, setData] = useState(firstData);
     const [cart, setCart] = useState([]);
-    const handleAddProduct = (product) => {
-        setCart([...cart, product])
+    useEffect(() => {
+        const savedCart = getDatabaseCart();
+        const cartKey = Object.keys(savedCart);
+        const product = cartKey.map(existingKey => {
+            const priviousCart = fakeData.find(cart => cart.key === existingKey);
+            priviousCart.quantity = savedCart[existingKey];
+            return priviousCart;        
+        })
+        setCart(product);
+    }, [])
+    
+    const addToCart = (product) => {
+        const toBeAdded = product.key;
+        const sameCart = cart.find(pd => pd.key === toBeAdded);
+        let count = 1;
+        let newCart;
+        if (sameCart) {
+            count = sameCart.quantity + 1;
+            sameCart.quantity = count;
+            const others = cart.filter(pd => pd.key !== toBeAdded);
+            newCart = [...others, sameCart];
+        }
+        else {
+            product.quantity = 1;
+            newCart = [...cart, product];
+        }
+        setCart(newCart);
+        addToDatabaseCart(product.key, count);
     }
-    const total = cart.reduce((item, product) => item + product.price, 0);
-    let shipping = 0;
-    if (total > 100) {
-        shipping = 0;
-    }
-    else if (total > 12) {
-        shipping = 7.77
-    }
-    else if (total > 0) {
-        shipping = 12.89
-    }
-    const sum = (total + shipping).toFixed(2);
-    const tax = (sum / 8).toFixed(2);
-    const grandTotal = Number(sum) + Number(tax);
+    
     return (
-        <div className="shop-container">
+        <div className="customer-area">
             <div className="product-container">
-                {
-                    data.map(product => <Product product={product} handleAddProduct={handleAddProduct}></Product> )
-                }
+                <img src="" alt=""/>
+                <div>
+                    {
+                        data.map(item => <Product showBtn={true} key={item.key} product={item} addToCart={addToCart}></Product>)
+                    }
+                </div>
             </div>
             <div className="cart-container">
-                <h3 className="alignment">Order Summery</h3>
-            <p className="alignment">Items Ordered: {cart.length}</p>
-                <p className="placing">
-                    <small>Items: $ {total} </small> <br/>
-                    <small>Shipping and Handling: $ {shipping} </small> <br/>
-                    <small>Total before tax: $ {sum} </small> <br/>
-                    <small>Estimated tax: $ {tax} </small>
-                </p>
-                <h3 style={{lineHeight: "0", color: "#b12704"}} className="placing">Order total:      ${grandTotal} </h3>
-                <button className="btn placing">Review your order</button>
+                <Cart cart={cart}>
+                    <Link to="/review"><button className= "btn">Review item</button></Link>
+                </Cart>
             </div>
         </div>
     );
